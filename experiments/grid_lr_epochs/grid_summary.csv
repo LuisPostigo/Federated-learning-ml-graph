@@ -1,0 +1,17 @@
+exp_dir,rounds,final_acc,final_loss,best_acc,best_acc_round,lr,local_epochs,sample_clients,dirichlet_alpha
+experiments/grid_lr_epochs/run_001_lr=0.1_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.1,25,0.9412,0.16999016213417054,0.9617,24,0.1,1,0.25,0.1
+experiments/grid_lr_epochs/run_002_lr=0.1_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.5,25,0.9768,0.06967684658765792,0.9803,24,0.1,1,0.25,0.5
+experiments/grid_lr_epochs/run_003_lr=0.1_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.1,25,0.965,0.11888748025894165,0.9696,20,0.1,1,0.5,0.1
+experiments/grid_lr_epochs/run_004_lr=0.1_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.5,25,0.9808,0.05953260562419891,0.9808,25,0.1,1,0.5,0.5
+experiments/grid_lr_epochs/run_005_lr=0.1_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.1,25,0.9554,0.13454457750320434,0.9758,20,0.1,2,0.25,0.1
+experiments/grid_lr_epochs/run_006_lr=0.1_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.5,25,0.9791,0.06335181002616883,0.9854,24,0.1,2,0.25,0.5
+experiments/grid_lr_epochs/run_007_lr=0.1_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.1,25,0.9726,0.08051568734645843,0.9826,23,0.1,2,0.5,0.1
+experiments/grid_lr_epochs/run_008_lr=0.1_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.5,25,0.9873,0.038054451084136964,0.9873,25,0.1,2,0.5,0.5
+experiments/grid_lr_epochs/run_009_lr=0.01_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.1,25,0.8194,0.5171112625122071,0.8598,21,0.01,1,0.25,0.1
+experiments/grid_lr_epochs/run_010_lr=0.01_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.5,25,0.8978,0.320771781539917,0.9043,22,0.01,1,0.25,0.5
+experiments/grid_lr_epochs/run_011_lr=0.01_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.1,25,0.8963,0.32528252267837526,0.8963,25,0.01,1,0.5,0.1
+experiments/grid_lr_epochs/run_012_lr=0.01_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.5,25,0.9008,0.3191681728363037,0.9008,25,0.01,1,0.5,0.5
+experiments/grid_lr_epochs/run_013_lr=0.01_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.1,25,0.8868,0.3420852548599243,0.9036,19,0.01,2,0.25,0.1
+experiments/grid_lr_epochs/run_014_lr=0.01_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.5,25,0.9291,0.22733975987434388,0.9304,23,0.01,2,0.25,0.5
+experiments/grid_lr_epochs/run_015_lr=0.01_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.1,25,0.8831,0.3459480374336243,0.9161,23,0.01,2,0.5,0.1
+experiments/grid_lr_epochs/run_016_lr=0.01_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.5,25,0.9245,0.2413094983100891,0.9297,23,0.01,2,0.5,0.5

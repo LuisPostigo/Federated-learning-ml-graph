@@ -1,0 +1,10 @@
+exp_dir,rounds,final_acc,final_loss,best_acc,best_acc_round,blocks,base_channels
+experiments/depth_sweep/run_001_blocks=2_base_channels=32,25,0.1558,2.3208247844696044,0.1775,21,2,32
+experiments/depth_sweep/run_002_blocks=2_base_channels=48,25,0.139,2.3088982513427734,0.1872,25,2,48
+experiments/depth_sweep/run_003_blocks=2_base_channels=64,25,0.2046,2.169263941574097,0.2046,26,2,64
+experiments/depth_sweep/run_004_blocks=3_base_channels=32,25,0.1763,2.223818544769287,0.1763,26,3,32
+experiments/depth_sweep/run_005_blocks=3_base_channels=48,25,0.2249,2.130557473754883,0.233,25,3,48
+experiments/depth_sweep/run_006_blocks=3_base_channels=64,25,0.2389,2.1624181526184083,0.2442,24,3,64
+experiments/depth_sweep/run_007_blocks=4_base_channels=32,25,0.2647,2.0362509756088256,0.2647,26,4,32
+experiments/depth_sweep/run_008_blocks=4_base_channels=48,25,0.2424,2.0976559112548827,0.2424,26,4,48
+experiments/depth_sweep/run_009_blocks=4_base_channels=64,25,0.244,2.038219854736328,0.2884,23,4,64

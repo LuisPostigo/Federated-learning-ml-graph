@@ -1,0 +1,13 @@
+exp_dir,rounds,final_acc,final_loss,best_acc,best_acc_round,arch,width_mult,use_bn
+experiments/depth_sweep/run_001_arch=baseline_width_mult=1.0_use_bn=False,,,,,,baseline,1.0,False
+experiments/depth_sweep/run_002_arch=baseline_width_mult=1.0_use_bn=True,,,,,,baseline,1.0,True
+experiments/depth_sweep/run_003_arch=baseline_width_mult=1.5_use_bn=False,,,,,,baseline,1.5,False
+experiments/depth_sweep/run_004_arch=baseline_width_mult=1.5_use_bn=True,,,,,,baseline,1.5,True
+experiments/depth_sweep/run_005_arch=wide_width_mult=1.0_use_bn=False,,,,,,wide,1.0,False
+experiments/depth_sweep/run_006_arch=wide_width_mult=1.0_use_bn=True,25,0.9876,0.04134324599504471,0.9876,26,wide,1.0,True
+experiments/depth_sweep/run_007_arch=wide_width_mult=1.5_use_bn=False,25,0.9474,0.1676973051548004,0.9488,25,wide,1.5,False
+experiments/depth_sweep/run_008_arch=wide_width_mult=1.5_use_bn=True,25,0.989,0.035940390729904174,0.989,26,wide,1.5,True
+experiments/depth_sweep/run_009_arch=deepish_width_mult=1.0_use_bn=False,25,0.9378,0.18703251123428344,0.9378,26,deepish,1.0,False
+experiments/depth_sweep/run_010_arch=deepish_width_mult=1.0_use_bn=True,25,0.9889,0.03566145527362823,0.989,23,deepish,1.0,True
+experiments/depth_sweep/run_011_arch=deepish_width_mult=1.5_use_bn=False,25,0.9313,0.2098225761413574,0.9394,25,deepish,1.5,False
+experiments/depth_sweep/run_012_arch=deepish_width_mult=1.5_use_bn=True,25,0.99,0.030454835599660873,0.99,26,deepish,1.5,True

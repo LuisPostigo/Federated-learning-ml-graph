@@ -1,0 +1,16 @@
+group,exp_dir,rounds,final_acc,final_loss,best_acc,best_acc_round,dirichlet_alpha,iid,lr,momentum,optimizer,weight_decay
+A,experiments/opt_and_wd/A_run_001_optimizer=sgd_lr=0.02_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.988,0.03359147000312805,0.988,26,0.5,False,0.02,0.9,sgd,0.0
+A,experiments/opt_and_wd/A_run_002_optimizer=sgd_lr=0.01_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9858,0.04633196380138397,0.9858,26,0.5,False,0.01,0.9,sgd,0.0
+A,experiments/opt_and_wd/A_run_003_optimizer=sgd_lr=0.005_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9776,0.06662590715885162,0.9776,26,0.5,False,0.005,0.9,sgd,0.0
+A,experiments/opt_and_wd/A_run_004_optimizer=adam_lr=0.02_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9643,0.12176618971824646,0.9675,21,0.5,False,0.02,0.9,adam,0.0
+A,experiments/opt_and_wd/A_run_005_optimizer=adam_lr=0.01_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9802,0.07598911647796631,0.9853,13,0.5,False,0.01,0.9,adam,0.0
+A,experiments/opt_and_wd/A_run_006_optimizer=adam_lr=0.005_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9846,0.06365589282512665,0.988,21,0.5,False,0.005,0.9,adam,0.0
+B,experiments/opt_and_wd/B_run_001_optimizer=sgd_lr=0.02_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.988,0.034994831645488736,0.988,25,0.5,False,0.02,0.9,sgd,0.0
+B,experiments/opt_and_wd/B_run_002_optimizer=sgd_lr=0.02_momentum=0.9_weight_decay=0.0001_iid=False_dirichlet_alpha=0.5,25,0.9859,0.040285831719636914,0.9867,23,0.5,False,0.02,0.9,sgd,0.0001
+B,experiments/opt_and_wd/B_run_003_optimizer=sgd_lr=0.02_momentum=0.9_weight_decay=0.0005_iid=False_dirichlet_alpha=0.5,25,0.9861,0.044063587409257886,0.9868,22,0.5,False,0.02,0.9,sgd,0.0005
+B,experiments/opt_and_wd/B_run_004_optimizer=sgd_lr=0.01_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9814,0.05337951219081879,0.9833,24,0.5,False,0.01,0.9,sgd,0.0
+B,experiments/opt_and_wd/B_run_005_optimizer=sgd_lr=0.01_momentum=0.9_weight_decay=0.0001_iid=False_dirichlet_alpha=0.5,25,0.9813,0.05726485741138458,0.9833,21,0.5,False,0.01,0.9,sgd,0.0001
+B,experiments/opt_and_wd/B_run_006_optimizer=sgd_lr=0.01_momentum=0.9_weight_decay=0.0005_iid=False_dirichlet_alpha=0.5,25,0.9833,0.04775532891750336,0.9833,26,0.5,False,0.01,0.9,sgd,0.0005
+B,experiments/opt_and_wd/B_run_007_optimizer=sgd_lr=0.005_momentum=0.9_weight_decay=0.0_iid=False_dirichlet_alpha=0.5,25,0.9729,0.07748867176771164,0.9743,23,0.5,False,0.005,0.9,sgd,0.0
+B,experiments/opt_and_wd/B_run_008_optimizer=sgd_lr=0.005_momentum=0.9_weight_decay=0.0001_iid=False_dirichlet_alpha=0.5,25,0.9775,0.06922149963378907,0.9775,26,0.5,False,0.005,0.9,sgd,0.0001
+B,experiments/opt_and_wd/B_run_009_optimizer=sgd_lr=0.005_momentum=0.9_weight_decay=0.0005_iid=False_dirichlet_alpha=0.5,25,0.9753,0.07297790381908417,0.9763,22,0.5,False,0.005,0.9,sgd,0.0005

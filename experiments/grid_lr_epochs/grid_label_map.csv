@@ -1,0 +1,17 @@
+run_id,run_name,final_acc,best_acc,final_loss
+run_008,run_008_lr=0.1_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.5,0.9873,0.9873,0.038054451084136964
+run_006,run_006_lr=0.1_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.5,0.9791,0.9854,0.06335181002616883
+run_007,run_007_lr=0.1_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.1,0.9726,0.9826,0.08051568734645843
+run_004,run_004_lr=0.1_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.5,0.9808,0.9808,0.05953260562419891
+run_002,run_002_lr=0.1_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.5,0.9768,0.9803,0.06967684658765792
+run_005,run_005_lr=0.1_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.1,0.9554,0.9758,0.13454457750320434
+run_003,run_003_lr=0.1_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.1,0.965,0.9696,0.11888748025894165
+run_001,run_001_lr=0.1_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.1,0.9412,0.9617,0.16999016213417054
+run_014,run_014_lr=0.01_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.5,0.9291,0.9304,0.22733975987434388
+run_016,run_016_lr=0.01_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.5,0.9245,0.9297,0.2413094983100891
+run_015,run_015_lr=0.01_local_epochs=2_sample_clients=0.5_dirichlet_alpha=0.1,0.8831,0.9161,0.3459480374336243
+run_010,run_010_lr=0.01_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.5,0.8978,0.9043,0.320771781539917
+run_013,run_013_lr=0.01_local_epochs=2_sample_clients=0.25_dirichlet_alpha=0.1,0.8868,0.9036,0.3420852548599243
+run_012,run_012_lr=0.01_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.5,0.9008,0.9008,0.3191681728363037
+run_011,run_011_lr=0.01_local_epochs=1_sample_clients=0.5_dirichlet_alpha=0.1,0.8963,0.8963,0.32528252267837526
+run_009,run_009_lr=0.01_local_epochs=1_sample_clients=0.25_dirichlet_alpha=0.1,0.8194,0.8598,0.5171112625122071
