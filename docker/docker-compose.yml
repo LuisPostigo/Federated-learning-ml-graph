@@ -9,24 +9,22 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - PYTHONBUFFERED=1
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./experiments:/app/experiments
       - ./data:/app/data
     networks:
-      - federated_network
+      - federated_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-
-
   client_0:
     build:
       context: .
-      dockefile: Dockerfile.client
+      dockerfile: Dockerfile.client
     container_name: federated_client_0
     depends_on:
       server:
@@ -43,25 +41,23 @@ services:
       - DIRICHLET_ALPHA=0.5
       - SEED=42
       - START_DELAY=0
-      - PYTHONBUFFERED=1
-
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
     networks:
-      - federated_network
+      - federated_net
     restart: on-failure
-
   client_1:
     build:
       context: .
-      dockefile: Dockerfile.client
+      dockerfile: Dockerfile.client
     container_name: federated_client_1
     depends_on:
       server:
         condition: service_healthy
     environment:
       - SERVER_URL=http://server:8000
-      - CLIENT_ID=0
+      - CLIENT_ID=1
       - NUM_CLIENTS=5
       - DEVICE=cpu
       - LOCAL_EPOCHS=2
@@ -70,18 +66,94 @@ services:
       - NUM_ROUNDS=25
       - DIRICHLET_ALPHA=0.5
       - SEED=42
-      - START_DELAY=0
-      - PYTHONBUFFERED=1
-
+      - START_DELAY=2
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
     networks:
-      - federated_network
+      - federated_net
     restart: on-failure
 
-
+  client_2:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: federated_client_2
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      - SERVER_URL=http://server:8000
+      - CLIENT_ID=2
+      - NUM_CLIENTS=5
+      - DEVICE=cpu
+      - LOCAL_EPOCHS=2
+      - BATCH_SIZE=64
+      - LEARNING_RATE=0.01
+      - NUM_ROUNDS=25
+      - DIRICHLET_ALPHA=0.5
+      - SEED=42
+      - START_DELAY=4
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    networks:
+      - federated_net
+    restart: on-failure
+  client_3:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: federated_client_3
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      - SERVER_URL=http://server:8000
+      - CLIENT_ID=3
+      - NUM_CLIENTS=5
+      - DEVICE=cpu
+      - LOCAL_EPOCHS=2
+      - BATCH_SIZE=64
+      - LEARNING_RATE=0.01
+      - NUM_ROUNDS=25
+      - DIRICHLET_ALPHA=0.5
+      - SEED=42
+      - START_DELAY=6
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    networks:
+      - federated_net
+    restart: on-failure
+  client_4:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: federated_client_4
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      - SERVER_URL=http://server:8000
+      - CLIENT_ID=4
+      - NUM_CLIENTS=5
+      - DEVICE=cpu
+      - LOCAL_EPOCHS=2
+      - BATCH_SIZE=64
+      - LEARNING_RATE=0.01
+      - NUM_ROUNDS=25
+      - DIRICHLET_ALPHA=0.5
+      - SEED=42
+      - START_DELAY=8
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    networks:
+      - federated_net
+    restart: on-failure
 networks:
-  federated_network
+  federated_net:
     driver: bridge
     ipam:
       config:
