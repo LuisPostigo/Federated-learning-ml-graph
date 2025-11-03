@@ -36,31 +36,45 @@ random.seed(hp.seed)
 torch.manual_seed(hp.seed)
 
 
-def load_data() -> Tuple[List[Subset], Dataset]:
+def load_dataset(dataset_name: str, data_dir: str = "./data") -> Tuple[List[Subset], Dataset]:
     """Load and partition the MNIST dataset for federated learning."""
-    transform = transforms.Compose([transforms.ToTensor()])
-    train = datasets.MNIST(root="./data", train=True, download=True, transform=transform)
-    test = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
+    dataset_name = dataset_name.lower()
+    if dataset_name == "mnist":
+        return load_mnist(data_dir)
+    elif dataset_name == "cifar10" or dataset_name == "cifar-10":
+        return load_cifar10(data_dir)
+    
 
-    if hp.iid:
-        # IID partitioning: random split
-        sizes = [len(train) // hp.num_clients] * hp.num_clients
-        sizes[-1] += len(train) - sum(sizes)
-        shards = random_split(train, sizes, generator=torch.Generator().manual_seed(hp.seed))
-        clients = [Subset(train, s.indices) for s in shards]
-        return clients, test
-    else:
-        # Non-IID partitioning: Dirichlet distribution
-        clients = dirichlet_partition(
-            train=train,
-            num_clients=hp.num_clients,
-            alpha=hp.dirichlet_alpha,
-            seed=hp.seed,
-            ensure_min_size=True,
-        )
-        return clients, test
+def partition_iid(dataset: Dataset, num_clients: int, seed: int = 42) -> List[Subset]:
+    sample_size = [len(dataset) // num_clients] * num_clients
+    sample_size[-1] += len(dataset) - sum(sample_size)
+    shards = random_split(dataset, sample_size, generator=torch.Generator().manual_seed(seed))
+    clients = [Subset(dataset, s.indices) for s in shards]
+    return clients 
 
+def load_cifar10(data_dir: str = "./data") -> Tuple[Dataset, Dataset]:
 
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
+
+    ])
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
+    ])
+    train = datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform_train)
+    test = datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
+    return train, test
+
+def load_mnist(data_dir: str = "./data") -> Tuple[Dataset, Dataset]:
+    transform = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Normalize((0.1307,),(0.3801,))])
+    train = datasets.MNIST(root=data_dir, train=True, download=True, transform=transform)
+    test = datasets.MNIST(root=data_dir, train=False, download=False, transform=transform)
+    return train, test
 def create_clients(client_datasets: List[Subset]) -> List[FederatedClient]:
     """Create FederatedClient instances from datasets."""
     clients = []
@@ -83,7 +97,7 @@ def create_clients(client_datasets: List[Subset]) -> List[FederatedClient]:
 def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer]:
     """Main federated learning orchestration loop."""
     # Load and partition data
-    client_datasets, testset = load_data()
+    client_datasets, testset = load_dataset()
     
     # Create clients and server
     clients = create_clients(client_datasets)
