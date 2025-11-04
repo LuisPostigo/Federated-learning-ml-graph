@@ -41,6 +41,7 @@ class ServerState:
         self.evaluation_history: Dict[str, List[float]] = {"round": [], "acc": [], "loss": []}
         self.testset: Optional[Dataset] = None
         self.experiments_dir: Path = Path("/app/experiments")
+        self.last_experiment_dir: Optional[Path] = None  # Track last experiment directory
         
 state = ServerState()
 
@@ -335,6 +336,7 @@ async def handle_training_completion():
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         exp_dir = state.experiments_dir / f"federated_run_{timestamp}"
         exp_dir.mkdir(parents=True, exist_ok=True)
+        state.last_experiment_dir = exp_dir  # Store for API access
         
         logger.info(f"Experiment directory created: {exp_dir}")
         
@@ -401,6 +403,47 @@ async def health_check():
         "current_round": state.current_round,
         "device": state.device
     }
+
+@app.get("/results")
+async def get_results():
+    """Get experiment results and evaluation history."""
+    if state.server is None:
+        raise HTTPException(status_code=400, detail="Server not initialized")
+    
+    return {
+        "current_round": state.current_round,
+        "max_rounds": state.max_rounds,
+        "evaluation_history": state.evaluation_history,
+        "last_experiment_dir": str(state.last_experiment_dir) if state.last_experiment_dir else None,
+        "training_complete": state.current_round >= state.max_rounds,
+        "summary": {
+            "total_rounds": len(state.evaluation_history.get("round", [])),
+            "final_accuracy": state.evaluation_history["acc"][-1] * 100 if state.evaluation_history["acc"] else None,
+            "final_loss": state.evaluation_history["loss"][-1] if state.evaluation_history["loss"] else None,
+            "best_accuracy": max(state.evaluation_history["acc"]) * 100 if state.evaluation_history["acc"] else None,
+            "best_round": state.evaluation_history["round"][state.evaluation_history["acc"].index(max(state.evaluation_history["acc"]))] if state.evaluation_history["acc"] else None,
+        }
+    }
+
+@app.get("/results/metrics")
+async def get_metrics_csv():
+    """Get metrics CSV content."""
+    if state.last_experiment_dir is None:
+        raise HTTPException(status_code=404, detail="No experiment results available yet")
+    
+    csv_path = state.last_experiment_dir / "metrics.csv"
+    if not csv_path.exists():
+        raise HTTPException(status_code=404, detail="Metrics CSV not found")
+    
+    import csv as csv_module
+    from fastapi.responses import Response
+    
+    with csv_path.open("r", encoding="utf-8") as f:
+        content = f.read()
+    
+    return Response(content=content, media_type="text/csv", headers={
+        "Content-Disposition": f"attachment; filename=metrics.csv"
+    })
 
 if __name__ == "__main__":
     import uvicorn
