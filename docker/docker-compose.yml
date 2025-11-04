@@ -145,6 +145,24 @@ services:
     networks:
       - federated_net
     restart: on-failure
+
+  # Orchestration service - runs standalone federated learning
+  orchestrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestrate
+    container_name: federated_orchestrate
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEVICE=cpu
+    volumes:
+      - ./experiments:/app/experiments
+      - ./data:/app/data
+    networks:
+      - federated_net
+    profiles:
+      - orchestrate  # Only run when explicitly requested
+
 networks:
   federated_net:
     driver: bridge

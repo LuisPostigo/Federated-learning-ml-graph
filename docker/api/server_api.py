@@ -9,9 +9,12 @@ from datetime import datetime, timedelta
 import pickle
 import logging
 from pathlib import Path
+from torch.utils.data import Dataset
 
 from model.cnn import CNN
 from server.model_server import FederatedServer
+from torchvision import datasets, transforms
+from utils.plotter import plot_history
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +37,10 @@ class ServerState:
         self.ready_for_next_round = asyncio.Event()
         self.ready_for_next_round.set()
         self.device: str = "cuda" if torch.cuda.is_available() else "cpu"
+        # Evaluation tracking
+        self.evaluation_history: Dict[str, List[float]] = {"round": [], "acc": [], "loss": []}
+        self.testset: Optional[Dataset] = None
+        self.experiments_dir: Path = Path("/app/experiments")
         
 state = ServerState()
 
@@ -63,6 +70,24 @@ async def startup_event():
     state.server = FederatedServer(model=CNN(), device=state.device)
     logger.info(f"Server initialized on device: {state.device}")
     
+    # Load MNIST test dataset for evaluation
+    logger.info("Loading MNIST test dataset...")
+    transform = transforms.Compose([transforms.ToTensor()])
+    state.testset = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
+    logger.info(f"Test dataset loaded: {len(state.testset)} samples")
+    
+    # Evaluate initial model (round 0)
+    if state.testset is not None:
+        acc0, loss0 = state.server.evaluate(state.testset)
+        state.evaluation_history["round"].append(0)
+        state.evaluation_history["acc"].append(acc0)
+        state.evaluation_history["loss"].append(loss0)
+        logger.info(f"[Round 00] Initial Test Acc: {acc0*100:5.2f}% | Test Loss: {loss0:.4f}")
+    
+    # Ensure experiments directory exists
+    state.experiments_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Experiments directory: {state.experiments_dir}")
+    
     # Start background task to monitor round timeouts
     asyncio.create_task(monitor_round_timeout())
 
@@ -77,6 +102,15 @@ async def initialize_server(config: InitRequest):
     state.client_updates.clear()
     state.server = FederatedServer(model=CNN(), device=state.device)
     state.ready_for_next_round.set()
+    
+    # Reset evaluation history and evaluate initial model
+    state.evaluation_history = {"round": [], "acc": [], "loss": []}
+    if state.testset is not None:
+        acc0, loss0 = state.server.evaluate(state.testset)
+        state.evaluation_history["round"].append(0)
+        state.evaluation_history["acc"].append(acc0)
+        state.evaluation_history["loss"].append(loss0)
+        logger.info(f"[Round 00] Initial Test Acc: {acc0*100:5.2f}% | Test Loss: {loss0:.4f}")
     
     logger.info(f"Server initialized: {config.num_rounds} rounds, "
                 f"{config.expected_clients} expected clients, "
@@ -257,6 +291,21 @@ async def trigger_aggregation():
             
             logger.info(f"Advanced to round {state.current_round}/{state.max_rounds}")
             
+            # Evaluate model after aggregation
+            if state.testset is not None and state.server is not None:
+                acc, loss = state.server.evaluate(state.testset)
+                state.evaluation_history["round"].append(state.current_round)
+                state.evaluation_history["acc"].append(acc)
+                state.evaluation_history["loss"].append(loss)
+                logger.info(f"[Round {state.current_round:02d}] Test Acc: {acc*100:5.2f}% | Test Loss: {loss:.4f}")
+            
+            # Check if training is complete
+            if state.current_round >= state.max_rounds:
+                logger.info("="*60)
+                logger.info("Training completed! Saving model and generating visualization...")
+                logger.info("="*60)
+                await handle_training_completion()
+            
         except Exception as e:
             logger.error(f"Aggregation failed: {e}")
         finally:
@@ -278,6 +327,70 @@ async def manual_aggregate():
         "current_round": state.current_round,
         "clients_aggregated": len(state.client_updates)
     }
+
+async def handle_training_completion():
+    """Handle post-training tasks: save model, evaluate, and generate visualization."""
+    try:
+        # Create timestamped experiment directory
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        exp_dir = state.experiments_dir / f"federated_run_{timestamp}"
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        
+        logger.info(f"Experiment directory created: {exp_dir}")
+        
+        # Save the model
+        model_path = exp_dir / "mnist_cnn.pt"
+        if state.server is not None:
+            state.server.save_model(str(model_path))
+            logger.info(f"Model saved to: {model_path}")
+        
+        # Run final evaluation on saved model
+        if state.testset is not None and state.server is not None:
+            logger.info("Running final evaluation on saved model...")
+            final_acc, final_loss = state.server.evaluate(state.testset)
+            
+            logger.info("="*60)
+            logger.info("FINAL MODEL EVALUATION RESULTS")
+            logger.info("="*60)
+            logger.info(f"Final Test Accuracy: {final_acc*100:5.2f}%")
+            logger.info(f"Final Test Loss: {final_loss:.4f}")
+            logger.info(f"Total Rounds: {len(state.evaluation_history['round'])}")
+            
+            # Display summary of all rounds
+            if state.evaluation_history["round"]:
+                logger.info("\nTraining Summary:")
+                logger.info("-" * 60)
+                for rnd, acc, loss in zip(
+                    state.evaluation_history["round"],
+                    state.evaluation_history["acc"],
+                    state.evaluation_history["loss"]
+                ):
+                    logger.info(f"Round {rnd:2d}: Acc={acc*100:5.2f}% | Loss={loss:.4f}")
+            
+            logger.info("="*60)
+            
+            # Generate and save visualization
+            logger.info("Generating visualization...")
+            try:
+                plot_history(
+                    state.evaluation_history,
+                    exp_dir=exp_dir,
+                    show=False  # Don't show in Docker, just save
+                )
+                logger.info(f"Visualization saved to: {exp_dir / 'metrics.png'}")
+                logger.info(f"Metrics CSV saved to: {exp_dir / 'metrics.csv'}")
+            except Exception as e:
+                logger.error(f"Failed to generate visualization: {e}")
+            
+            logger.info("="*60)
+            logger.info(f"Experiment completed successfully!")
+            logger.info(f"All outputs saved to: {exp_dir}")
+            logger.info("="*60)
+        else:
+            logger.warning("Cannot evaluate: testset or server not available")
+            
+    except Exception as e:
+        logger.error(f"Error during training completion: {e}", exc_info=True)
 
 @app.get("/health")
 async def health_check():
