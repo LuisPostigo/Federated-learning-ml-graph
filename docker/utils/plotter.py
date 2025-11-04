@@ -4,7 +4,6 @@ from pathlib import Path
 import csv
 
 def plot_history(history: Dict[str, List[float]], exp_dir: str | Path | None = None, show: bool = True) -> None:
-    # Lazy import matplotlib to avoid requiring it for clients that don't need visualization
     try:
         import matplotlib
         matplotlib.use('Agg')  # Use non-interactive backend
