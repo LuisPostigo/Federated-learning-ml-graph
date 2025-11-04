@@ -7,7 +7,6 @@ from torch.utils.data import Dataset, Subset, random_split
 from pathlib import Path
 
 from model.cnn import CNN
-from utils.plotter import plot_history
 from utils.experiments import create_experiment_dir
 from utils.dirichlet_partition import dirichlet_partition
 from client.local_server import FederatedClient
@@ -43,14 +42,14 @@ def load_data() -> Tuple[List[Subset], Dataset]:
     test = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
 
     if hp.iid:
-        # IID partitioning: random split
+    
         sizes = [len(train) // hp.num_clients] * hp.num_clients
         sizes[-1] += len(train) - sum(sizes)
         shards = random_split(train, sizes, generator=torch.Generator().manual_seed(hp.seed))
         clients = [Subset(train, s.indices) for s in shards]
         return clients, test
     else:
-        # Non-IID partitioning: Dirichlet distribution
+    
         clients = dirichlet_partition(
             train=train,
             num_clients=hp.num_clients,
@@ -104,10 +103,9 @@ def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer]:
     )
     print(f"[Round 00] Test Acc: {acc0*100:5.2f}% | Test Loss: {loss0:.4f}")
 
-    # Federated learning rounds
+
     for rnd in range(1, hp.rounds + 1):
-        # Sample clients for this round
-        # If sample_clients is 0 or <= 0, use all clients
+ 
         if hp.sample_clients <= 0:
             num_selected = hp.num_clients
         else:
@@ -115,16 +113,15 @@ def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer]:
         selected_indices = random.sample(range(hp.num_clients), min(num_selected, hp.num_clients))
         selected_clients = [clients[i] for i in selected_indices]
 
-        # Collect updates from selected clients
+      
         client_updates = []
         for client in selected_clients:
             state_dict, num_samples = client.train(server.get_global_model())
             client_updates.append((state_dict, num_samples))
 
-        # Aggregate updates on server
+        
         server.aggregate(client_updates)
 
-        # Evaluate global model
         acc, loss = server.evaluate(testset)
         history["round"].append(rnd)
         history["acc"].append(acc)
@@ -136,8 +133,7 @@ def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer]:
 
 
 if __name__ == "__main__":
-    # Create experiment directory
-    # The create_experiment_dir function handles both "batch" and "local_batch_size" keys
+ 
     exp_dir: Path = create_experiment_dir(asdict(hp), exp_root="experiments")
     
     print("="*60)
@@ -151,10 +147,14 @@ if __name__ == "__main__":
     model_path = exp_dir / "mnist_cnn.pt"
     server.save_model(str(model_path))
     print(f"\nModel saved to: {model_path}")
-    
-    # Generate visualization (show=False for Docker/headless environments)
-    print("Generating visualization...")
-    plot_history(history, exp_dir=exp_dir, show=False)
+
+    try:
+        from utils.plotter import plot_history
+        print("Generating visualization...")
+        plot_history(history, exp_dir=exp_dir, show=False)
+    except ImportError as e:
+        print(f"Warning: Could not generate visualization - {e}")
+        print("Metrics CSV was still saved successfully.")
     
     print("="*60)
     print(f"[OK] Experiment completed successfully!")
