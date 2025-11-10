@@ -29,7 +29,7 @@ class CIFAR10CNN(nn.Module):
       self.conv2 = nn.Conv2d(64,128, kernel_size=3, padding=1)
       self.batchNorm2_1 = nn.BatchNorm2d(128)
       self.conv2_2 = nn.Conv2d(128,128, kernel_size=3, padding=1)
-      self.batchNorm2_2 = nn.Conv2d(128)
+      self.batchNorm2_2 = nn.BatchNorm2d(128)
 
       self.conv3 = nn.Conv2d(128,256, kernel_size=3, padding=1)
       self.batchNorm3_1 = nn.BatchNorm2d(256)
@@ -53,7 +53,7 @@ class CIFAR10CNN(nn.Module):
           x = self.pool(x)
 
           x = F.relu(self.batchNorm3_1(self.conv3(x)))
-          x = F.relu(self.batchNorm3_2(self.conv3_1(x)))
+          x = F.relu(self.batchNorm3_3(self.conv3_1(x)))
 
           x = self.pool(x)
 

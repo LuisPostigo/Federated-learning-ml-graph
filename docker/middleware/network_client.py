@@ -174,8 +174,13 @@ class NetworkThrottleClient:
 
         try:
             # Create a temporary model to load the global state
-            from model.cnn import CNN
-            global_model = CNN()
+            # Use the same model type as the server
+            from model import get_model
+            import os
+            
+            # Get model name from environment or default to cnn
+            model_name = os.getenv("MODEL_NAME", "cnn").lower().strip()
+            global_model = get_model(model_name)
             global_model.load_state_dict(global_model_state)
             
             logger.info(f"Client {self.client_id}: Starting local training for round {self.current_round}")

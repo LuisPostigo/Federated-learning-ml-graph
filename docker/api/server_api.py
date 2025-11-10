@@ -1,6 +1,7 @@
 import torch
 import asyncio
 import uuid
+import os
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -11,10 +12,11 @@ import logging
 from pathlib import Path
 from torch.utils.data import Dataset
 
-from model.cnn import CNN
+from model import get_model, get_model_info
 from server.model_server import FederatedServer
 from torchvision import datasets, transforms
 from utils.plotter import plot_history
+from utils.data_loader import get_dataset_for_model
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,11 +30,11 @@ class ServerState:
         self.server: Optional[FederatedServer] = None
         self.current_round: int = 0
         self.max_rounds: int = 25
-        self.expected_clients: int = 5  # Number of clients expected per round
-        self.min_clients: int = 2  # Minimum clients needed to proceed
-        self.client_updates: Dict[str, tuple] = {}  # client_id -> (state_dict, num_samples, timestamp)
+        self.expected_clients: int = 5  
+        self.min_clients: int = 2  
+        self.client_updates: Dict[str, tuple] = {}  
         self.round_start_time: Optional[datetime] = None
-        self.round_timeout: int = 300  # 5 minutes timeout per round
+        self.round_timeout: int = 300  
         self.aggregation_lock = asyncio.Lock()
         self.ready_for_next_round = asyncio.Event()
         self.ready_for_next_round.set()
@@ -41,7 +43,8 @@ class ServerState:
         self.evaluation_history: Dict[str, List[float]] = {"round": [], "acc": [], "loss": []}
         self.testset: Optional[Dataset] = None
         self.experiments_dir: Path = Path("/app/experiments")
-        self.last_experiment_dir: Optional[Path] = None  # Track last experiment directory
+        self.last_experiment_dir: Optional[Path] = None
+        self.model_name: str = "cnn"  # Default model
         
 state = ServerState()
 
@@ -51,6 +54,7 @@ class InitRequest(BaseModel):
     expected_clients: int = 5
     min_clients: int = 2
     round_timeout: int = 300
+    model_name: str = "cnn"  # Model to use: "cnn", "cifar10_cnn", or "resnet"
 
 class ClientUpdate(BaseModel):
     client_id: str
@@ -68,14 +72,34 @@ class RoundStatus(BaseModel):
 async def startup_event():
     """Initialize the server on startup."""
     logger.info("Starting Federated Learning Server...")
-    state.server = FederatedServer(model=CNN(), device=state.device)
-    logger.info(f"Server initialized on device: {state.device}")
     
-    # Load MNIST test dataset for evaluation
-    logger.info("Loading MNIST test dataset...")
-    transform = transforms.Compose([transforms.ToTensor()])
-    state.testset = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
-    logger.info(f"Test dataset loaded: {len(state.testset)} samples")
+    # Get model name from environment variable or use default
+    model_name = os.getenv("MODEL_NAME", "cnn").lower().strip()
+    state.model_name = model_name
+    
+    # Load the selected model
+    try:
+        model = get_model(model_name)
+        state.server = FederatedServer(model=model, device=state.device)
+        model_info = get_model_info(model_name)
+        logger.info(f"Server initialized on device: {state.device}")
+        logger.info(f"Model: {model_info.get('name', model_name)} - {model_info.get('description', '')}")
+        if state.server.use_distributed:
+            logger.info(f"Distributed aggregation enabled: {state.server.world_size} processes")
+        else:
+            logger.info("Using optimized single-device aggregation")
+    except ValueError as e:
+        logger.error(f"Failed to load model '{model_name}': {e}")
+        logger.info("Falling back to default CNN model")
+        model = get_model("cnn")
+        state.server = FederatedServer(model=model, device=state.device)
+        state.model_name = "cnn"
+    
+    # Load appropriate test dataset based on model
+    dataset_name = "CIFAR10" if "cifar10" in model_name else "MNIST"
+    logger.info(f"Loading {dataset_name} test dataset for model '{model_name}'...")
+    _, state.testset = get_dataset_for_model(model_name, data_dir="./data")
+    logger.info(f"{dataset_name} test dataset loaded: {len(state.testset)} samples")
     
     # Evaluate initial model (round 0)
     if state.testset is not None:
@@ -101,7 +125,22 @@ async def initialize_server(config: InitRequest):
     state.round_timeout = config.round_timeout
     state.current_round = 0
     state.client_updates.clear()
-    state.server = FederatedServer(model=CNN(), device=state.device)
+    
+    # Load the specified model
+    model_name = config.model_name.lower().strip() if hasattr(config, 'model_name') else state.model_name
+    try:
+        model = get_model(model_name)
+        state.server = FederatedServer(model=model, device=state.device)
+        state.model_name = model_name
+        model_info = get_model_info(model_name)
+        logger.info(f"Model loaded: {model_info.get('name', model_name)}")
+    except ValueError as e:
+        logger.error(f"Failed to load model '{model_name}': {e}")
+        logger.info("Falling back to default CNN model")
+        model = get_model("cnn")
+        state.server = FederatedServer(model=model, device=state.device)
+        state.model_name = "cnn"
+    
     state.ready_for_next_round.set()
     
     # Reset evaluation history and evaluate initial model

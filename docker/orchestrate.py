@@ -11,12 +11,14 @@ from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, random_split
 from pathlib import Path
 
-from model.cnn import CNN
+from model import get_model, get_model_info
 from utils.plotter import plot_history
 from utils.experiments import create_experiment_dir
 from utils.dirichlet_partition import dirichlet_partition
+from utils.data_loader import get_dataset_for_model
 from client.local_server import FederatedClient
 from server.model_server import FederatedServer
+import os
 
 
 @dataclass
@@ -34,18 +36,25 @@ class HParams:
     dirichlet_alpha: float = 0.5
     seed: int = 42
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    model_name: str = "cnn"  # Model to use: "cnn", "cifar10_cnn", or "resnet"
 
 
 hp = HParams()
+# Override model_name from environment variable if set
+if os.getenv("MODEL_NAME"):
+    hp.model_name = os.getenv("MODEL_NAME").lower().strip()
 random.seed(hp.seed)
 torch.manual_seed(hp.seed)
 
 
 def load_data() -> Tuple[List[Subset], Dataset]:
-    """Load and partition the MNIST dataset for federated learning."""
-    transform = transforms.Compose([transforms.ToTensor()])
-    train = datasets.MNIST(root="./data", train=True, download=True, transform=transform)
-    test = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
+    """Load and partition the dataset for federated learning based on model selection."""
+    # Load appropriate dataset based on model
+    dataset_name = "CIFAR10" if "cifar10" in hp.model_name.lower() else "MNIST"
+    print(f"Loading {dataset_name} dataset for model '{hp.model_name}'...")
+    
+    train, test = get_dataset_for_model(hp.model_name, data_dir="./data")
+    print(f"{dataset_name} dataset loaded: {len(train)} training samples, {len(test)} test samples")
 
     if hp.iid:
         # IID partitioning: random split
@@ -92,7 +101,19 @@ def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer, Dataset]:
     
     # Create clients and server
     clients = create_clients(client_datasets)
-    server = FederatedServer(model=CNN(), device=hp.device)
+    
+    # Load the selected model
+    try:
+        model = get_model(hp.model_name)
+        model_info = get_model_info(hp.model_name)
+        print(f"Using model: {model_info.get('name', hp.model_name)} - {model_info.get('description', '')}")
+    except ValueError as e:
+        print(f"Warning: Failed to load model '{hp.model_name}': {e}")
+        print("Falling back to default CNN model")
+        model = get_model("cnn")
+        hp.model_name = "cnn"
+    
+    server = FederatedServer(model=model, device=hp.device)
     
     # Initialize history tracking
     history: Dict[str, List[float]] = {"round": [], "acc": [], "loss": []}

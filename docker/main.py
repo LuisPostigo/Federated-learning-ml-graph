@@ -13,6 +13,7 @@ from torch.utils.data import Subset
 
 from middleware.network_client import create_network_client
 from utils.dirichlet_partition import dirichlet_partition
+from utils.data_loader import get_dataset_for_model
 from client.local_server import FederatedClient
 
 logging.basicConfig(
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def load_client_data(client_id: int, num_clients: int, alpha: float = 0.5, seed: int = 42):
     """
-    Load and partition MNIST data for a specific client.
+    Load and partition data for a specific client based on model selection.
     
     Args:
         client_id: ID of this client
@@ -35,10 +36,14 @@ def load_client_data(client_id: int, num_clients: int, alpha: float = 0.5, seed:
     Returns:
         Dataset subset for this client
     """
-    logger.info(f"Loading data for client {client_id}/{num_clients}")
+    # Get model name from environment variable
+    model_name = os.getenv("MODEL_NAME", "cnn").lower().strip()
+    dataset_name = "CIFAR10" if "cifar10" in model_name else "MNIST"
     
-    transform = transforms.Compose([transforms.ToTensor()])
-    train = datasets.MNIST(root="./data", train=True, download=True, transform=transform)
+    logger.info(f"Loading {dataset_name} data for client {client_id}/{num_clients} (model: {model_name})")
+    
+    # Load appropriate dataset
+    train, _ = get_dataset_for_model(model_name, data_dir="./data")
     
     # Partition the data using Dirichlet distribution
     try:
@@ -55,7 +60,7 @@ def load_client_data(client_id: int, num_clients: int, alpha: float = 0.5, seed:
             sys.exit(1)
         
         client_dataset = clients[client_id]
-        logger.info(f"Client {client_id} has {len(client_dataset)} samples")
+        logger.info(f"Client {client_id} has {len(client_dataset)} samples from {dataset_name}")
         
         return client_dataset
         
