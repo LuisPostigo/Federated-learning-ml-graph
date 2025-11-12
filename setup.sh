@@ -77,19 +77,45 @@ if [[ $DOCKER -eq 1 ]]; then
 else
   # Local execution
   [ -d "$VENV_DIR" ] || "$PYTHON_BIN" -m venv "$VENV_DIR"
+  
+  # Activate virtual environment
   # shellcheck disable=SC1090
-  source "$VENV_DIR/bin/activate"
+  if [[ -f "$VENV_DIR/bin/activate" ]]; then
+    source "$VENV_DIR/bin/activate"
+  else
+    echo "[ERR] Virtual environment activation script not found at $VENV_DIR/bin/activate"
+    exit 1
+  fi
 
-  python -m pip install --upgrade pip
-  pip install -r requirements.txt
+  # Verify we're using the venv's Python
+  VENV_PYTHON="$VENV_DIR/bin/python"
+  if [[ ! -f "$VENV_PYTHON" ]]; then
+    echo "[ERR] Python not found in virtual environment at $VENV_PYTHON"
+    exit 1
+  fi
 
-  echo "[OK] venv: $VENV_DIR (python: $(python -V))"
+  # Use venv's python explicitly
+  "$VENV_PYTHON" -m pip install --upgrade pip
+  "$VENV_PYTHON" -m pip install -r requirements.txt
+
+  # Verify activation by checking Python path
+  ACTUAL_PYTHON=$(which python)
+  if [[ "$ACTUAL_PYTHON" != *"$VENV_DIR"* ]]; then
+    echo "[WARN] Virtual environment may not be fully activated."
+    echo "[INFO] Using venv Python explicitly: $VENV_PYTHON"
+    PYTHON_CMD="$VENV_PYTHON"
+  else
+    PYTHON_CMD="python"
+  fi
+
+  echo "[OK] venv: $VENV_DIR (python: $($PYTHON_CMD -V))"
+  echo "[OK] Python path: $($PYTHON_CMD -c 'import sys; print(sys.executable)')"
   echo "[OK] Model: $MODEL_NAME"
   echo "[OK] To keep it active after: source $VENV_DIR/bin/activate"
 
   if [[ $RUN -eq 1 ]]; then
     [[ -f main.py ]] || { echo "[ERR] main.py not found."; exit 1; }
-    echo "[OK] Running: python main.py $* (with MODEL_NAME=$MODEL_NAME)"
-    python -m main "$@"
+    echo "[OK] Running: $PYTHON_CMD -m main $* (with MODEL_NAME=$MODEL_NAME)"
+    "$PYTHON_CMD" -m main "$@"
   fi
 fi

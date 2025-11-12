@@ -1,15 +1,24 @@
+import sys
+import os
+from pathlib import Path
+
+# Add docker directory to Python path to import modules
+docker_dir = Path(__file__).parent / "docker"
+if str(docker_dir) not in sys.path:
+    sys.path.insert(0, str(docker_dir))
+
 import torch
 import random
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Tuple
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, Subset, random_split
-from pathlib import Path
 
-from model.cnn import CNN
+from model import get_model
 from utils.plotter import plot_history
 from utils.experiments import create_experiment_dir
 from utils.dirichlet_partition import dirichlet_partition
+from utils.data_loader import get_dataset_for_model
 from client.local_server import FederatedClient
 from server.model_server import FederatedServer
 
@@ -29,52 +38,42 @@ class HParams:
     dirichlet_alpha: float = 0.5
     seed: int = 42
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    model_name: str = "cnn"  # Model to use: "cnn", "cifar10_cnn", or "resnet"
 
 
 hp = HParams()
+# Override model_name from environment variable if set
+if os.getenv("MODEL_NAME"):
+    hp.model_name = os.getenv("MODEL_NAME").lower().strip()
 random.seed(hp.seed)
 torch.manual_seed(hp.seed)
 
 
-def load_dataset(dataset_name: str, data_dir: str = "./data") -> Tuple[List[Subset], Dataset]:
-    """Load and partition the MNIST dataset for federated learning."""
-    dataset_name = dataset_name.lower()
-    if dataset_name == "mnist":
-        return load_mnist(data_dir)
-    elif dataset_name == "cifar10" or dataset_name == "cifar-10":
-        return load_cifar10(data_dir)
+def load_data() -> Tuple[List[Subset], Dataset]:
+    """Load and partition the dataset for federated learning."""
+    # Load appropriate dataset based on model
+    train, test = get_dataset_for_model(hp.model_name, data_dir="./data")
     
+    # Partition data
+    if hp.iid:
+        # IID partition: random split
+        sample_size = [len(train) // hp.num_clients] * hp.num_clients
+        sample_size[-1] += len(train) - sum(sample_size)
+        shards = random_split(train, sample_size, generator=torch.Generator().manual_seed(hp.seed))
+        client_datasets = [Subset(train, s.indices) for s in shards]
+    else:
+        # Non-IID partition: Dirichlet distribution
+        client_datasets = dirichlet_partition(
+            train=train,
+            num_clients=hp.num_clients,
+            alpha=hp.dirichlet_alpha,
+            seed=hp.seed,
+            ensure_min_size=True,
+        )
+    
+    return client_datasets, test
 
-def partition_iid(dataset: Dataset, num_clients: int, seed: int = 42) -> List[Subset]:
-    sample_size = [len(dataset) // num_clients] * num_clients
-    sample_size[-1] += len(dataset) - sum(sample_size)
-    shards = random_split(dataset, sample_size, generator=torch.Generator().manual_seed(seed))
-    clients = [Subset(dataset, s.indices) for s in shards]
-    return clients 
 
-def load_cifar10(data_dir: str = "./data") -> Tuple[Dataset, Dataset]:
-
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
-
-    ])
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914,0.4822,0.4465),(0.2023,0.1994,0.2010))
-    ])
-    train = datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform_train)
-    test = datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
-    return train, test
-
-def load_mnist(data_dir: str = "./data") -> Tuple[Dataset, Dataset]:
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Normalize((0.1307,),(0.3801,))])
-    train = datasets.MNIST(root=data_dir, train=True, download=True, transform=transform)
-    test = datasets.MNIST(root=data_dir, train=False, download=False, transform=transform)
-    return train, test
 def create_clients(client_datasets: List[Subset]) -> List[FederatedClient]:
     """Create FederatedClient instances from datasets."""
     clients = []
@@ -97,11 +96,14 @@ def create_clients(client_datasets: List[Subset]) -> List[FederatedClient]:
 def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer]:
     """Main federated learning orchestration loop."""
     # Load and partition data
-    client_datasets, testset = load_dataset()
+    client_datasets, testset = load_data()
+    
+    # Create model based on model_name
+    model = get_model(hp.model_name)
     
     # Create clients and server
     clients = create_clients(client_datasets)
-    server = FederatedServer(model=CNN(), device=hp.device)
+    server = FederatedServer(model=model, device=hp.device)
     
     # Initialize history tracking
     history: Dict[str, List[float]] = {"round": [], "acc": [], "loss": []}
@@ -148,6 +150,7 @@ def orchestrate() -> Tuple[Dict[str, List[float]], FederatedServer]:
 if __name__ == "__main__":
     exp_dir: Path = create_experiment_dir(asdict(hp))
     history, server = orchestrate()
-    server.save_model(str(exp_dir / "mnist_cnn.pt"))
+    model_filename = f"{hp.model_name}_model.pt"
+    server.save_model(str(exp_dir / model_filename))
     plot_history(history, exp_dir=exp_dir, show=True)
     print(f"[OK] Experiment saved to: {exp_dir}")
