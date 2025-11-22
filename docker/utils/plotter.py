@@ -2,9 +2,17 @@ from typing import Dict, List
 from pathlib import Path
 
 import csv
-import matplotlib.pyplot as plt
 
 def plot_history(history: Dict[str, List[float]], exp_dir: str | Path | None = None, show: bool = True) -> None:
+    try:
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError(
+            "matplotlib is required for visualization. "
+            "Install it with: pip install matplotlib>=3.7.0"
+        )
     rounds = history.get("round", [])
     acc = history.get("acc", [])
     loss = history.get("loss", [])
