@@ -5,6 +5,12 @@ from pathlib import Path
 import importlib
 import torch
 
+# ---------------------------------------------------------------------------
+# Project bootstrap and orchestrator import
+# Allows experiment scripts in nested directories to call main.orchestrate()
+# and use main.HParams without restructuring the repository.
+# ---------------------------------------------------------------------------
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
@@ -15,15 +21,23 @@ from utils.plotter import plot_history
 EXP_ROOT = Path(__file__).resolve().parent
 SUMMARY_CSV = EXP_ROOT / "summary_opt_and_wd.csv"
 
-GRID_A = {  # optimizer + lr
+# ---------------------------------------------------------------------------
+# Two separate grids are explored:
+#   GRID_A – sweeps optimizer type and learning rate (with fixed weight decay)
+#   GRID_B – sweeps weight decay for SGD across multiple learning rates
+# Both grids target non-IID training with Dirichlet client sampling.
+# ---------------------------------------------------------------------------
+
+GRID_A = {
     "optimizer": ["sgd", "adam"],
     "lr": [0.02, 0.01, 0.005],
-    "momentum": [0.9],        
+    "momentum": [0.9],
     "weight_decay": [0.0],
     "iid": [False],
     "dirichlet_alpha": [0.5],
 }
-GRID_B = {  # weight decay + lr (sgd)
+
+GRID_B = {
     "optimizer": ["sgd"],
     "lr": [0.02, 0.01, 0.005],
     "momentum": [0.9],
@@ -32,19 +46,35 @@ GRID_B = {  # weight decay + lr (sgd)
     "dirichlet_alpha": [0.5],
 }
 
+# ---------------------------------------------------------------------------
+# Construct a stable list of hyperparameter combinations from a grid.
+# Returns an ordered key list and a list of dicts representing each config.
+# ---------------------------------------------------------------------------
+
 def combos(grid: dict) -> tuple[list[str], list[dict]]:
     keys = list(grid.keys())
     vals = [grid[k] for k in keys]
     out = [{k: v for k, v in zip(keys, tup)} for tup in itertools.product(*vals)]
     return keys, out
 
+# ---------------------------------------------------------------------------
+# Execute a single federated training run:
+# - Inject hyperparameters
+# - Call orchestrator
+# - Save model and training curves
+# - Return aggregate metrics required for post-analysis
+# ---------------------------------------------------------------------------
+
 def run_one(cfg: m.HParams, run_name: str) -> dict:
     m.hp = cfg
     history, model = m.orchestrate()
+
     exp_dir = create_experiment_dir(asdict(cfg), exp_root=str(EXP_ROOT), name=run_name)
     torch.save(model.state_dict(), exp_dir / "mnist_cnn.pt")
     plot_history(history, exp_dir=exp_dir, show=False)
+
     rounds, accs, losses = history["round"], history["acc"], history["loss"]
+
     return {
         "exp_dir": str(exp_dir.relative_to(ROOT)),
         "rounds": rounds[-1] if rounds else 0,
@@ -53,6 +83,12 @@ def run_one(cfg: m.HParams, run_name: str) -> dict:
         "best_acc": max(accs) if accs else 0.0,
         "best_acc_round": (accs.index(max(accs)) + 1) if accs else 0,
     }
+
+# ---------------------------------------------------------------------------
+# Write or update the summary CSV.
+# The file is overwritten after each run to preserve partial progress and
+# ensure experiment sweeps remain interruption-safe.
+# ---------------------------------------------------------------------------
 
 def write_summary(rows: list[dict], header: list[str]) -> None:
     SUMMARY_CSV.parent.mkdir(parents=True, exist_ok=True)
@@ -64,21 +100,39 @@ def write_summary(rows: list[dict], header: list[str]) -> None:
                 r.setdefault(k, "")
             w.writerow(r)
 
+# ---------------------------------------------------------------------------
+# Main sweep controller.
+# Processes GRID_A and GRID_B as independent groups. Each run is tagged
+# with its group identifier (“A” or “B”) to keep results traceable.
+# Reuses past results if the experiment directory already contains metrics.
+# ---------------------------------------------------------------------------
+
 def main():
     rows = []
+
     for tag, grid in (("A", GRID_A), ("B", GRID_B)):
         keys, cs = combos(grid)
+
         for i, params in enumerate(cs, 1):
             cfg = replace(m.HParams(), **params)
             run_name = f"{tag}_run_{i:03d}_" + "_".join(f"{k}={params[k]}" for k in keys)
             run_dir = EXP_ROOT / run_name
+
             if (run_dir / "metrics.csv").exists():
                 result = {"exp_dir": str(run_dir.relative_to(ROOT))}
             else:
                 result = run_one(cfg, run_name)
+
             rows.append({"group": tag, **result, **params})
-            header = ["group","exp_dir","rounds","final_acc","final_loss","best_acc","best_acc_round"] + sorted(set(GRID_A.keys()) | set(GRID_B.keys()))
+
+            # Combined header across both grids ensures a consistent CSV schema.
+            header = [
+                "group", "exp_dir", "rounds", "final_acc",
+                "final_loss", "best_acc", "best_acc_round"
+            ] + sorted(set(GRID_A.keys()) | set(GRID_B.keys()))
+
             write_summary(rows, header)
+
     print(SUMMARY_CSV.relative_to(ROOT))
 
 if __name__ == "__main__":
