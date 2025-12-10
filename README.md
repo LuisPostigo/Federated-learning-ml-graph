@@ -4,7 +4,7 @@
 
 <!-- Contributors -->
 <a href="https://github.com/madch3m/Federated-learning-ml-graph/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=madch3m/Federated-learning-ml-graph" />
+  <img src="https://contrib.rocks/image?repo=madch3m/Federated-learning-ml-graph&v=1" />
 </a>
 
 **Special Thanks**
