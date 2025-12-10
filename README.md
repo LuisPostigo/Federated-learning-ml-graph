@@ -64,20 +64,41 @@ The platform has been tested using MNIST and CIFAR-10, with reproducible compari
 ```
 federated-learning-ml-graph/
 │
-├── fedavg/                    # Core FedAvg algorithm + client update logic
-├── fedsgd/                    # Baseline FedSGD implementation
-├── centralized/               # Centralized SGD baseline
+├── main.py
+├── orchestrate.py
+│   # Core experiment entry points (manual run + API for grid scripts).
 │
-├── data/                      # Auto-populated datasets (MNIST, CIFAR10)
-├── models/                    # CNN, CIFAR10 CNN, ResNet definitions
-├── partitioning/              # IID, non-IID, Dirichlet partition utilities
+├── model/
+│   ├── cnn.py
+│   └── resnet.py
+│   # Supported model architectures.
 │
-├── scripts/
-│   ├── setup.sh               # macOS/Linux runner
-│   ├── setup.ps1              # Windows runner
+├── client/local_server.py
+│   # FederatedClient: local training, optimizers, batching.
 │
-├── results/                   # Output logs, plots, metrics
-└── README.md
+├── server/model_server.py
+│   # FederatedServer: global model & FedAvg aggregation.
+│
+├── utils/
+│   ├── data_loader.py          # MNIST/CIFAR10 loaders + transforms
+│   ├── dirichlet_partition.py  # Non-IID data generation
+│   ├── experiments.py          # Experiment directory & metadata
+│   └── plotter.py              # Accuracy/loss visualization
+│
+├── experiments/
+│   ├── depth_sweep/
+│   ├── grid_lr_epochs/
+│   └── opt_and_wd/
+│   # Reproducible grid-search experiment groups.
+│
+├── api/server_api.py
+│   # Optional HTTP interface for orchestrating runs remotely.
+│
+├── docker-compose.yml
+├── Dockerfile.server
+├── Dockerfile.client
+└── Dockerfile.orchestrate
+    # Dockerized execution environment.
 ```
 
 ---
