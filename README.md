@@ -7,6 +7,9 @@
   <img src="https://contrib.rocks/image?repo=madch3m/Federated-learning-ml-graph" />
 </a>
 
+**Special Thanks**
+Course: *COMP 6130 – Data Mining*, Auburn University.
+
 ---
 
 **Communication-Efficient Deep Learning from Decentralized Data**
@@ -221,17 +224,3 @@ Long, D., Postigo, L., & Dozal, R. *Federated Learning Experiment Report – Fed
 
 **Original Federated Averaging Paper**
 McMahan, B., Moore, E., Ramage, D., et al. *Communication-Efficient Learning of Deep Networks from Decentralized Data.* AISTATS, 2017.
-
----
-
-## Contributors
-
-**Core Authors**
-
-* **Luis Postigo** — Systems engineering, model architecture, experiment reproduction
-* **Devin Long** — Experiment design, results analysis
-* **Raul Dozal** — Data preprocessing, FL configuration design
-
-**Special Thanks**
-Course: *COMP 6130 – Data Mining*, Auburn University.
-
