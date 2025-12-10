@@ -5,6 +5,13 @@ from pathlib import Path
 import importlib
 import torch
 
+# ---------------------------------------------------------------------------
+# Environment and module loading
+# Extends sys.path to allow experiment scripts inside subfolders to import
+# the project's main orchestrator. All experiment configuration relies on
+# main.HParams and main.orchestrate().
+# ---------------------------------------------------------------------------
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
@@ -13,6 +20,12 @@ from utils.experiments import create_experiment_dir
 from utils.plotter import plot_history
 
 EXP_ROOT = Path(__file__).resolve().parent
+
+# ---------------------------------------------------------------------------
+# Hyperparameter grid for a basic sweep over federated learning settings.
+# These values override fields in HParams via dataclass.replace(). Each
+# unique tuple of values defines one complete experiment execution.
+# ---------------------------------------------------------------------------
 
 PARAM_GRID = {
     "lr": [0.1, 0.01],
@@ -23,19 +36,34 @@ PARAM_GRID = {
 
 SUMMARY_CSV = EXP_ROOT / "grid_summary.csv"
 
+# ---------------------------------------------------------------------------
+# Generate Cartesian product of parameter settings. Returned structure keeps
+# ordering stable so filenames and CSV columns remain consistent.
+# ---------------------------------------------------------------------------
+
 def param_combos(grid: dict) -> tuple[list[str], list[dict]]:
     keys = list(grid.keys())
     vals = [grid[k] for k in keys]
     combos = [{k: v for k, v in zip(keys, tup)} for tup in itertools.product(*vals)]
     return keys, combos
 
+# ---------------------------------------------------------------------------
+# Execute one experiment instance:
+# - Inject hyperparameters into the global orchestrator.
+# - Run training and obtain history + trained model.
+# - Save artifacts and extract aggregated metrics.
+# ---------------------------------------------------------------------------
+
 def run_one(cfg: m.HParams, run_name: str) -> dict:
     m.hp = cfg
     history, model = m.orchestrate()
+
     exp_dir = create_experiment_dir(asdict(cfg), exp_root=str(EXP_ROOT), name=run_name)
     torch.save(model.state_dict(), exp_dir / "mnist_cnn.pt")
     plot_history(history, exp_dir=exp_dir, show=False)
+
     rounds, accs, losses = history["round"], history["acc"], history["loss"]
+
     return {
         "exp_dir": str(exp_dir.relative_to(ROOT)),
         "rounds": rounds[-1] if rounds else 0,
@@ -44,6 +72,12 @@ def run_one(cfg: m.HParams, run_name: str) -> dict:
         "best_acc": max(accs) if accs else 0.0,
         "best_acc_round": (accs.index(max(accs)) + 1) if accs else 0,
     }
+
+# ---------------------------------------------------------------------------
+# Summary CSV writer.
+# The summary file is rewritten after each completed run to preserve partial
+# results, enabling interruption-safe sweeps on long grids.
+# ---------------------------------------------------------------------------
 
 def write_summary(rows: list[dict], header: list[str]) -> None:
     SUMMARY_CSV.parent.mkdir(parents=True, exist_ok=True)
@@ -55,20 +89,31 @@ def write_summary(rows: list[dict], header: list[str]) -> None:
                 r.setdefault(k, "")
             w.writerow(r)
 
+# ---------------------------------------------------------------------------
+# Main sweep controller.
+# Iterates through all hyperparameter combinations; reuses existing results
+# when metrics.csv is detected. Generates a globally ordered summary table.
+# ---------------------------------------------------------------------------
+
 def main():
     keys, combos = param_combos(PARAM_GRID)
     header = ["exp_dir", "rounds", "final_acc", "final_loss", "best_acc", "best_acc_round"] + keys
     rows: list[dict] = []
+
     for i, params in enumerate(combos, 1):
         cfg = replace(m.HParams(), **params)
         run_name = f"run_{i:03d}_" + "_".join(f"{k}={params[k]}" for k in keys)
         run_dir = EXP_ROOT / run_name
+
         if (run_dir / "metrics.csv").exists():
+            # Experiment already completed; avoid re-running.
             result = {"exp_dir": str(run_dir.relative_to(ROOT))}
         else:
             result = run_one(cfg, run_name)
+
         rows.append({**result, **params})
         write_summary(rows, header)
+
     print(SUMMARY_CSV.relative_to(ROOT))
 
 if __name__ == "__main__":
